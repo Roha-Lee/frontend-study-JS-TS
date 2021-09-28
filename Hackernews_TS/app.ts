@@ -1,5 +1,6 @@
-// JS -> TS migration
-// v1. 함수, 변수에 타입 작성하기 
+// v1. 함수, 변수에 타입 작성하기 JS -> TS migration
+// v2. type -> Interface 연습 
+// v3. 상속, 믹스인 연습
 interface Store {
   currentPage: number;
   newsPerPage: number; 
@@ -39,10 +40,33 @@ const store: Store = {
   feeds: []
 };
 
-function getData<AjaxResponse>(url: string): AjaxResponse {
-  ajax.open('GET', url, false);
-  ajax.send();
-  return JSON.parse(ajax.response);
+class Api {
+  url: string;
+  ajax: XMLHttpRequest;
+
+  constructor(url: string) {
+    this.url = url;
+    this.ajax = new XMLHttpRequest();
+  }
+
+  protected getRequest<AjaxResponse>(): AjaxResponse {
+    this.ajax.open('GET', this.url, false);
+    this.ajax.send();
+
+    return JSON.parse(this.ajax.response)
+  }
+}
+
+class NewsFeedApi extends Api {
+  getData(): NewsFeed[] {
+    return this.getRequest<NewsFeed[]>();
+  }
+}
+
+class NewsDetailApi extends Api {
+  getData(): NewsDetail {
+    return this.getRequest<NewsDetail>();
+  }
 }
 
 function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
@@ -61,9 +85,10 @@ function updateView(html: string): void {
 }
 
 function newsFeed(): void {
-  let newsFeed: NewsFeed[] = store.feeds
+  const api = new NewsFeedApi(NEWS_URL);
+  let newsFeed: NewsFeed[] = store.feeds;
   if(newsFeed.length === 0){
-    newsFeed = store.feeds = makeFeeds(getData<NewsFeed[]>(NEWS_URL))
+    newsFeed = store.feeds = makeFeeds(api.getData())
   }
   const maxPage = Math.ceil(newsFeed.length / store.newsPerPage)
   let template = `
@@ -151,12 +176,13 @@ function makeComment(comments: NewsComment[]): string {
 }
 
 function newsDetail(): void {
+  const api = new NewsDetailApi(CONTENT_URL.replace('@id', id));
   const id = location.hash.substr(7)
   const {
     title,
     content, 
     comments
-  } = getData<NewsDetail>(CONTENT_URL.replace('@id', id))
+  } = api.getData();
 
   let template = `
   <div class="bg-gray-600 min-h-screen pb-8">
