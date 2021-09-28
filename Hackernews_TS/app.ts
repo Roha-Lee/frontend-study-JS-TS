@@ -1,6 +1,6 @@
 // v1. 함수, 변수에 타입 작성하기 JS -> TS migration
 // v2. type -> Interface 연습 
-// v3. 상속, 믹스인 연습
+// v3. 상속, 믹스인 연습 
 interface Store {
   currentPage: number;
   newsPerPage: number; 
@@ -39,35 +39,74 @@ const store: Store = {
   newsPerPage: 7, 
   feeds: []
 };
+// class & 상속 기법 : 다중상속을 지원하지 않고 상속 관계가 코드에 의해 적시되기 때문에 유연하지 못하다. 
+// class Api {
+//   url: string;
+//   ajax: XMLHttpRequest;
+
+//   constructor(url: string) {
+//     this.url = url;
+//     this.ajax = new XMLHttpRequest();
+//   }
+
+//   protected getRequest<AjaxResponse>(): AjaxResponse {
+//     this.ajax.open('GET', this.url, false);
+//     this.ajax.send();
+
+//     return JSON.parse(this.ajax.response)
+//   }
+// }
+
+// class NewsFeedApi extends Api {
+//   getData(): NewsFeed[] {
+//     return this.getRequest<NewsFeed[]>();
+//   }
+// }
+
+// class NewsDetailApi extends Api {
+//   getData(): NewsDetail {
+//     return this.getRequest<NewsDetail>();
+//   }
+// }
+
+function applyApiMixins(targetClass: any, baseClasses: any[]): void {
+  baseClasses.forEach(baseClass => {
+    Object.getOwnPropertyNames(baseClass.prototype).forEach(name => {
+      const descriptor = Object.getOwnPropertyDescriptor(baseClass.prototype, name);
+      if (descriptor) {
+        Object.defineProperty(targetClass.prototype, name, descriptor)
+      }
+    })
+  })
+}
 
 class Api {
-  url: string;
-  ajax: XMLHttpRequest;
+  getRequest<AjaxResponse>(url: string): AjaxResponse {
+    const ajax = new XMLHttpRequest();
+    ajax.open('GET', url, false);
+    ajax.send();
 
-  constructor(url: string) {
-    this.url = url;
-    this.ajax = new XMLHttpRequest();
-  }
-
-  protected getRequest<AjaxResponse>(): AjaxResponse {
-    this.ajax.open('GET', this.url, false);
-    this.ajax.send();
-
-    return JSON.parse(this.ajax.response)
+    return JSON.parse(ajax.response);
   }
 }
 
-class NewsFeedApi extends Api {
+class NewsFeedApi {
   getData(): NewsFeed[] {
-    return this.getRequest<NewsFeed[]>();
+    return this.getRequest<NewsFeed[]>(NEWS_URL);
   }
 }
 
-class NewsDetailApi extends Api {
-  getData(): NewsDetail {
-    return this.getRequest<NewsDetail>();
+class NewsDetailApi {
+  getData(id: string): NewsDetail {
+    return this.getRequest<NewsDetail>(CONTENT_URL.replace('@id', id));
   }
 }
+
+interface NewsFeedApi extends Api {};
+interface NewsDetailApi extends Api {};
+
+applyApiMixins(NewsFeedApi, [Api]);
+applyApiMixins(NewsDetailApi, [Api]);
 
 function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
   for (let i = 0; i < feeds.length; i+=1){
@@ -85,7 +124,7 @@ function updateView(html: string): void {
 }
 
 function newsFeed(): void {
-  const api = new NewsFeedApi(NEWS_URL);
+  const api = new NewsFeedApi();
   let newsFeed: NewsFeed[] = store.feeds;
   if(newsFeed.length === 0){
     newsFeed = store.feeds = makeFeeds(api.getData())
@@ -176,13 +215,14 @@ function makeComment(comments: NewsComment[]): string {
 }
 
 function newsDetail(): void {
-  const api = new NewsDetailApi(CONTENT_URL.replace('@id', id));
+  const api = new NewsDetailApi();
   const id = location.hash.substr(7)
+  
   const {
     title,
     content, 
     comments
-  } = api.getData();
+  } = api.getData(id);
 
   let template = `
   <div class="bg-gray-600 min-h-screen pb-8">
