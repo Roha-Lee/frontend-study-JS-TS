@@ -1,32 +1,34 @@
 // JS -> TS migration
 // v1. 함수, 변수에 타입 작성하기 
-type Store = {
+interface Store {
   currentPage: number;
   newsPerPage: number; 
   feeds: NewsFeed[];
 }
-type News = {
-  id: number;
-  time_ago: string;
-  title: string;
-  content: string;
-  url: string;
-  user: string;
+
+interface News {
+  readonly id: number;
+  readonly time_ago: string;
+  readonly title: string;
+  readonly content: string;
+  readonly url: string;
+  readonly user: string;
 }
 
-type NewsFeed = News & {
-  comments_count: number;
-  points: number;
+interface NewsFeed extends News {
+  readonly comments_count: number;
+  readonly points: number;
   read?: boolean;
 }
 
-type NewsDetail = News & {
-  comments: NewsComment[];
+interface NewsDetail extends News {
+  readonly comments: NewsComment[];
 }
 
-type NewsComment = NewsDetail & {
-  level: number;
+interface NewsComment extends NewsDetail {
+  readonly level: number;
 }
+
 const container: HTMLElement | null = document.getElementById('root');
 const ajax: XMLHttpRequest = new XMLHttpRequest();
 const NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
@@ -63,7 +65,6 @@ function newsFeed(): void {
   if(newsFeed.length === 0){
     newsFeed = store.feeds = makeFeeds(getData<NewsFeed[]>(NEWS_URL))
   }
-  
   const maxPage = Math.ceil(newsFeed.length / store.newsPerPage)
   let template = `
   <div class="bg-gray-600 min-h-screen">
@@ -89,7 +90,6 @@ function newsFeed(): void {
       </div>
     </div>
   `
-
   const newsList = []
   for (let i = store.newsPerPage * (store.currentPage - 1); i < Math.min(store.newsPerPage * store.currentPage, newsFeed.length); i += 1) {
     const {
@@ -121,15 +121,11 @@ function newsFeed(): void {
       </div>    
     `)
   }
-
   template = template
     .replace('{{__news_feed__}}', newsList.join(''))
     .replace('{{__prev_page__}}', String(store.currentPage > 1 ? store.currentPage - 1 : 1))
     .replace('{{__next_page__}}', String(store.currentPage < maxPage ? store.currentPage + 1 : maxPage));
-  
-  updateView(template);
-    
-  
+  updateView(template);  
 }
 
 function makeComment(comments: NewsComment[]): string {
@@ -156,12 +152,12 @@ function makeComment(comments: NewsComment[]): string {
 
 function newsDetail(): void {
   const id = location.hash.substr(7)
-
   const {
     title,
     content, 
     comments
   } = getData<NewsDetail>(CONTENT_URL.replace('@id', id))
+
   let template = `
   <div class="bg-gray-600 min-h-screen pb-8">
       <div class="bg-white text-xl">
