@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true, 
+    "target": "ES5",
+    "module": "CommonJS",
+    "alwaysStrict": true, 
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "sourceMap": true, // js 와 ts를 연결해 주는 파일을 사용 -> 디버깅할때 js코드가 아니라 ts코드로 확인가능하도록
+    "downlevelIteration": true   
+  }
+}
